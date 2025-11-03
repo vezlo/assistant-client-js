@@ -1,0 +1,49 @@
+{
+  "name": "@vezlo/assistant-client-js",
+  "version": "1.0.0",
+  "description": "Embeddable AI assistant SDK with knowledge base, streaming chat, and self-generating personality",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ai",
+    "assistant",
+    "chatbot",
+    "knowledge-base",
+    "rag",
+    "streaming",
+    "openai",
+    "supabase"
+  ],
+  "author": "Vezlo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vezlo/assistant-client-js.git"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "openai": "^4.20.1",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "@types/uuid": "^9.0.7",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+

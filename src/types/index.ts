@@ -166,3 +166,11 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface UserIntent {
+  type: 'greeting' | 'question' | 'chitchat' | 'gibberish';
+  needsKnowledgeBase: boolean;
+  confidence: number;
+  directResponse?: string; // Response generated during intent detection
+  enhancedQuery?: string; // Enhanced query for better semantic search (for questions)
+}
+

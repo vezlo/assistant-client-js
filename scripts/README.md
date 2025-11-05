@@ -47,12 +47,14 @@ Edit `config.json` with your credentials:
 The script will automatically check if the `ai_knowledge_items` table exists in your Supabase database.
 
 **If the table doesn't exist:**
-- The script will display the required SQL
+- The script will display the required SQL from `schema.sql`
 - You'll need to copy and run it in your Supabase SQL Editor
 - Press Enter when ready, and the script will verify the table was created
 
 **If the table exists:**
 - The script will continue automatically
+
+**Note**: The complete database schema is available in `scripts/schema.sql` and can be run manually if needed.
 
 See the main project's `schema.sql` for the complete schema including all tables.
 
@@ -190,7 +192,7 @@ Done!
 
 ### When Table Doesn't Exist
 
-If the table doesn't exist, the script will pause and display the SQL you need to run:
+If the table doesn't exist, the script will pause and display the SQL from `schema.sql` that you need to run:
 
 ```
 Initializing Supabase connection...
@@ -198,6 +200,7 @@ Checking if table 'ai_knowledge_items' exists...
 ✗ Table 'ai_knowledge_items' does not exist
 
 Creating table...
+[Using schema from: /path/to/scripts/schema.sql]
 
 IMPORTANT: Please run the following SQL in your Supabase SQL Editor:
 ============================================================

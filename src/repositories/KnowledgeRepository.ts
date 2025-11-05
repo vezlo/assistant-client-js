@@ -98,40 +98,23 @@ export class KnowledgeRepository {
   }
 
   async semanticSearch(queryEmbedding: number[], limit: number, threshold: number): Promise<SearchResult[]> {
-    const { data, error } = await this.client
-      .from(this.tableName)
-      .select('uuid, title, description, content, type, metadata, embedding')
-      .not('embedding', 'is', null)
-      .limit(limit * 3); // Fetch more for filtering
+    const { data, error } = await this.client.rpc('match_knowledge_items', {
+      query_embedding: queryEmbedding,
+      match_threshold: threshold,
+      match_count: limit
+    });
 
     if (error) throw new Error(`Semantic search failed: ${error.message}`);
 
-    const results: SearchResult[] = [];
-    for (const item of data || []) {
-      if (item.embedding) {
-        let embedding = item.embedding;
-        if (typeof embedding === 'string') {
-          embedding = JSON.parse(embedding);
-        }
-        
-        if (Array.isArray(embedding)) {
-          const score = this.cosineSimilarity(queryEmbedding, embedding);
-          if (score >= threshold) {
-            results.push({
-              uuid: item.uuid,
-              title: item.title,
-              description: item.description,
-              content: item.content,
-              type: item.type,
-              score,
-              metadata: item.metadata
-            });
-          }
-        }
-      }
-    }
-
-    return results.sort((a, b) => b.score - a.score).slice(0, limit);
+    return (data || []).map((item: any) => ({
+      uuid: item.uuid,
+      title: item.title,
+      description: item.description,
+      content: item.content,
+      type: item.type,
+      score: item.similarity,
+      metadata: item.metadata
+    }));
   }
 
   async keywordSearch(query: string, limit: number): Promise<SearchResult[]> {
@@ -166,17 +149,6 @@ export class KnowledgeRepository {
 
     if (error) throw new Error(`Failed to list knowledge items: ${error.message}`);
     return (data || []).map(row => this.mapRow(row));
-  }
-
-  private cosineSimilarity(a: number[], b: number[]): number {
-    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return 0;
-    
-    const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0);
-    const magnitudeA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
-    const magnitudeB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
-    
-    if (magnitudeA === 0 || magnitudeB === 0) return 0;
-    return dotProduct / (magnitudeA * magnitudeB);
   }
 
   private mapRow(row: any): KnowledgeItem {

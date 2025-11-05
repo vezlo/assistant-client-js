@@ -3,19 +3,69 @@ import { KnowledgeService } from './KnowledgeService';
 import { AIService } from './AIService';
 import { PersonalityProfile, BuildPersonalityInput, BuildPersonalityOutput } from '../types';
 
+// Simple cache implementation
+interface CacheEntry<T> {
+  value: T;
+  expiresAt: number;
+}
+
+class SimpleCache<K, V> {
+  private store = new Map<K, CacheEntry<V>>();
+  private ttl: number;
+
+  constructor(ttl: number) {
+    this.ttl = ttl;
+  }
+
+  get(key: K): V | undefined {
+    const entry = this.store.get(key);
+    if (!entry) return undefined;
+    
+    if (Date.now() > entry.expiresAt) {
+      this.store.delete(key);
+      return undefined;
+    }
+    
+    return entry.value;
+  }
+
+  set(key: K, value: V): void {
+    this.store.set(key, {
+      value,
+      expiresAt: Date.now() + this.ttl
+    });
+  }
+
+  delete(key: K): void {
+    this.store.delete(key);
+  }
+}
+
 export class PersonalityService {
+  private cache: SimpleCache<string, BuildPersonalityOutput>;
+
   constructor(
     private repository: PersonalityRepository,
     private knowledgeService: KnowledgeService,
     private aiService: AIService,
     private defaultPersonality?: { name?: string; tone?: string; customInstructions?: string }
-  ) {}
+  ) {
+    // Initialize cache with 5-minute TTL
+    this.cache = new SimpleCache<string, BuildPersonalityOutput>(1000 * 60 * 5);
+  }
 
   async getPersonality(): Promise<BuildPersonalityOutput> {
+    // Check cache first
+    const cached = this.cache.get('personality');
+    if (cached) {
+      return cached;
+    }
+
+    // Fetch from database
     const existing = await this.repository.get();
     
     if (existing) {
-      return {
+      const result = {
         systemPrompt: existing.systemPrompt,
         profile: {
           name: existing.name,
@@ -24,6 +74,10 @@ export class PersonalityService {
           domain: existing.metadata?.domain
         }
       };
+      
+      // Cache the result
+      this.cache.set('personality', result);
+      return result;
     }
 
     // Build default if none exists
@@ -31,6 +85,9 @@ export class PersonalityService {
   }
 
   async buildPersonality(input?: BuildPersonalityInput): Promise<BuildPersonalityOutput> {
+    // Invalidate cache since we're building new personality
+    this.cache.delete('personality');
+
     // If custom instructions provided, use them
     if (this.defaultPersonality?.customInstructions) {
       const name = this.defaultPersonality.name || 'AI Assistant';
@@ -42,7 +99,11 @@ export class PersonalityService {
       };
 
       await this.repository.save(name, systemPrompt, profile);
-      return { systemPrompt, profile };
+      
+      // Cache the new personality
+      const result = { systemPrompt, profile };
+      this.cache.set('personality', result);
+      return result;
     }
 
     // Build from knowledge base
@@ -59,7 +120,11 @@ export class PersonalityService {
       };
 
       await this.repository.save(name, systemPrompt, profile);
-      return { systemPrompt, profile };
+      
+      // Cache the new personality
+      const result = { systemPrompt, profile };
+      this.cache.set('personality', result);
+      return result;
     }
 
     // Summarize knowledge base to create personality
@@ -81,10 +146,17 @@ export class PersonalityService {
     };
 
     await this.repository.save(name, systemPrompt, profile);
-    return { systemPrompt, profile };
+    
+    // Cache the new personality
+    const result = { systemPrompt, profile };
+    this.cache.set('personality', result);
+    return result;
   }
 
   async setPersonality(systemPrompt: string, profile?: PersonalityProfile): Promise<void> {
+    // Invalidate cache since personality is being updated
+    this.cache.delete('personality');
+    
     const name = profile?.name || 'AI Assistant';
     await this.repository.save(name, systemPrompt, profile);
   }

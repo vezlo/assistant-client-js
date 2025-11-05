@@ -271,49 +271,24 @@ async function createTable(supabaseUrl, supabaseKey, tableName) {
   console.log('='.repeat(60));
   console.log('');
 
-  const sql = `
--- Enable vector extension
-CREATE EXTENSION IF NOT EXISTS vector;
-
--- Create knowledge items table
-CREATE TABLE IF NOT EXISTS ${tableName} (
-  id BIGSERIAL PRIMARY KEY,
-  uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
-  parent_id BIGINT REFERENCES ${tableName}(id),
-  title TEXT NOT NULL,
-  description TEXT,
-  type TEXT NOT NULL CHECK (type IN ('folder', 'document', 'file', 'url', 'url_directory')),
-  content TEXT,
-  file_url TEXT,
-  file_size BIGINT,
-  file_type TEXT,
-  metadata JSONB DEFAULT '{}',
-  embedding vector(1536),
-  processed_at TIMESTAMPTZ,
-  created_by TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Create indexes
-CREATE INDEX IF NOT EXISTS idx_${tableName}_uuid ON ${tableName}(uuid);
-CREATE INDEX IF NOT EXISTS idx_${tableName}_parent_id ON ${tableName}(parent_id);
-CREATE INDEX IF NOT EXISTS idx_${tableName}_type ON ${tableName}(type);
-CREATE INDEX IF NOT EXISTS idx_${tableName}_created_at ON ${tableName}(created_at DESC);
-
--- Full-text search index
-CREATE INDEX IF NOT EXISTS idx_${tableName}_search
-ON ${tableName} USING gin(to_tsvector('english', title || ' ' || COALESCE(description, '') || ' ' || COALESCE(content, '')));
-
--- Vector similarity index for semantic search
-CREATE INDEX IF NOT EXISTS idx_${tableName}_embedding
-ON ${tableName} USING ivfflat (embedding vector_cosine_ops)
-WHERE embedding IS NOT NULL;
-
--- Sparse indexes
-CREATE INDEX IF NOT EXISTS idx_${tableName}_content ON ${tableName}(content) WHERE content IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_${tableName}_file_url ON ${tableName}(file_url) WHERE file_url IS NOT NULL;
-`;
+  // Read schema from file
+  const schemaPath = path.join(__dirname, 'schema.sql');
+  let sql = '';
+  
+  try {
+    if (fs.existsSync(schemaPath)) {
+      sql = fs.readFileSync(schemaPath, 'utf8');
+      console.log(`[Using schema from: ${schemaPath}]`);
+      console.log('');
+    } else {
+      console.error(`Warning: schema.sql not found at ${schemaPath}`);
+      console.error('Please ensure schema.sql exists in the scripts folder.');
+      process.exit(1);
+    }
+  } catch (error) {
+    console.error('Error reading schema file:', error.message);
+    process.exit(1);
+  }
 
   console.log(sql);
   console.log('='.repeat(60));

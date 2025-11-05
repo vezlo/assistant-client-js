@@ -171,32 +171,49 @@ export class AssistantAI {
       Object.keys(userMetadata).length > 0 ? userMetadata : undefined
     );
 
-    // Get conversation history
-    const messages = await this.messageRepo.listByConversation(conversationId, 10);
-    const conversationHistory = messages.slice(0, -1).map(msg => ({
+    // Get conversation history (last 6 messages for context)
+    const messages = await this.messageRepo.listByConversation(conversationId, 7);
+    const conversationHistory = messages.slice(0, -1).slice(-6).map(msg => ({
       role: msg.type,
       content: msg.content
     }));
 
-    // Search knowledge base
-    const knowledgeResults = await this.knowledgeService.search(input.message, 3, 0.7, 'hybrid');
-    const knowledgeContext = this.knowledgeService.formatKnowledgeContext(knowledgeResults);
-
     // Get personality
     const personality = await this.personalityService.getPersonality();
 
-    // Generate AI response
-    const aiResponse = await this.aiService.generateResponse(
-      input.message,
-      personality.systemPrompt,
+    // Detect user intent (may include direct response for non-questions)
+    const intent = await this.aiService.detectIntent(
+      input.message, 
       conversationHistory,
-      knowledgeContext
+      personality.systemPrompt
     );
+    
+    let aiResponse: string;
+    let knowledgeResults: any[] = [];
+    
+    // Use direct response if available (for greetings, chitchat, gibberish)
+    if (intent.directResponse) {
+      aiResponse = intent.directResponse;
+    } else {
+      // For questions: use enhanced query for better semantic search
+      const searchQuery = intent.enhancedQuery || input.message;
+      knowledgeResults = await this.knowledgeService.search(searchQuery, 5, 0.5, 'semantic');
+      const knowledgeContext = this.knowledgeService.formatKnowledgeContext(knowledgeResults);
+      
+      aiResponse = await this.aiService.generateResponse(
+        input.message,
+        personality.systemPrompt,
+        conversationHistory,
+        knowledgeContext
+      );
+    }
 
     // Prepare metadata for assistant message
     const assistantMetadata: Record<string, any> = {
       knowledgeUsed: knowledgeResults.length > 0,
-      knowledgeItemCount: knowledgeResults.length
+      knowledgeItemCount: knowledgeResults.length,
+      intentType: intent.type,
+      intentConfidence: intent.confidence
     };
     if (input.context) {
       assistantMetadata.userContext = input.context;
@@ -271,38 +288,58 @@ export class AssistantAI {
         Object.keys(userMetadata).length > 0 ? userMetadata : undefined
       );
 
-      // Get conversation history
-      const messages = await this.messageRepo.listByConversation(conversationId, 10);
-      const conversationHistory = messages.slice(0, -1).map(msg => ({
+      // Get conversation history (last 6 messages for context)
+      const messages = await this.messageRepo.listByConversation(conversationId, 7);
+      const conversationHistory = messages.slice(0, -1).slice(-6).map(msg => ({
         role: msg.type,
         content: msg.content
       }));
 
-      // Search knowledge base
-      const knowledgeResults = await this.knowledgeService.search(input.message, 3, 0.7, 'hybrid');
-      const knowledgeContext = this.knowledgeService.formatKnowledgeContext(knowledgeResults);
-
       // Get personality
       const personality = await this.personalityService.getPersonality();
 
-      // Stream AI response
-      let fullContent = '';
-      const stream = this.aiService.streamResponse(
-        input.message,
-        personality.systemPrompt,
+      // Detect user intent (may include direct response for non-questions)
+      const intent = await this.aiService.detectIntent(
+        input.message, 
         conversationHistory,
-        knowledgeContext
+        personality.systemPrompt
       );
+      
+      let fullContent = '';
+      let knowledgeResults: any[] = [];
+      
+      // Use direct response if available (for greetings, chitchat, gibberish)
+      if (intent.directResponse) {
+        fullContent = intent.directResponse;
+        // Stream the direct response character by character for UX
+        for (let i = 0; i < fullContent.length; i++) {
+          yield { type: 'delta', content: fullContent[i] };
+        }
+      } else {
+        // For questions: use enhanced query for better semantic search
+        const searchQuery = intent.enhancedQuery || input.message;
+        knowledgeResults = await this.knowledgeService.search(searchQuery, 5, 0.5, 'hybrid');
+        const knowledgeContext = this.knowledgeService.formatKnowledgeContext(knowledgeResults);
+        
+        const stream = this.aiService.streamResponse(
+          input.message,
+          personality.systemPrompt,
+          conversationHistory,
+          knowledgeContext
+        );
 
-      for await (const chunk of stream) {
-        fullContent += chunk;
-        yield { type: 'delta', content: chunk };
+        for await (const chunk of stream) {
+          fullContent += chunk;
+          yield { type: 'delta', content: chunk };
+        }
       }
 
       // Prepare metadata for assistant message
       const assistantMetadata: Record<string, any> = {
         knowledgeUsed: knowledgeResults.length > 0,
         knowledgeItemCount: knowledgeResults.length,
+        intentType: intent.type,
+        intentConfidence: intent.confidence,
         streamed: true
       };
       if (input.context) {

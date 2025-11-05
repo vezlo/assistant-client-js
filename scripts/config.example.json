@@ -1,0 +1,39 @@
+{
+  "supabaseUrl": "https://your-project.supabase.co",
+  "supabaseKey": "your-supabase-service-role-key-here",
+  "openaiApiKey": "sk-your-openai-api-key-here",
+  "folderPath": "/path/to/your/project",
+
+  "chunkSize": 1000,
+  "chunkOverlap": 200,
+  "chunkThreshold": 2000,
+
+  "removeComments": true,
+  "tablePrefix": "ai_",
+  "createdBy": "embedding-script",
+
+  "extensions": [
+    ".js", ".jsx", ".ts", ".tsx",
+    ".py", ".java", ".cpp", ".c", ".h",
+    ".cs", ".php", ".rb", ".go", ".rs",
+    ".swift", ".kt", ".scala", ".sh",
+    ".html", ".css", ".scss", ".json",
+    ".yaml", ".yml", ".sql", ".md"
+  ],
+
+  "excludePaths": [
+    "node_modules",
+    ".git",
+    "dist",
+    "build",
+    "coverage",
+    ".next",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "vendor"
+  ],
+
+  "includeFolders": "",
+  "excludeFolders": ""
+}

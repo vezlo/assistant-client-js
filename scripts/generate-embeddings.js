@@ -751,6 +751,40 @@ async function main() {
     return;
   }
 
+  // Display list of files to be processed
+  console.log('='.repeat(60));
+  console.log('  Files to be processed:');
+  console.log('='.repeat(60));
+  files.forEach((file, index) => {
+    const relativePath = path.relative(config.folderPath, file);
+    const ext = path.extname(file).toLowerCase();
+    const language = LANGUAGE_MAP[ext] || 'Unknown';
+    console.log(`  ${index + 1}. [${language}] ${relativePath}`);
+  });
+  console.log('');
+  console.log(`Total: ${files.length} files`);
+  console.log('');
+
+  // Wait for user confirmation
+  await new Promise((resolve) => {
+    const readline = require('readline');
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    rl.question('Do you want to proceed with embedding generation? (yes/no): ', (answer) => {
+      rl.close();
+      if (answer.toLowerCase() !== 'yes' && answer.toLowerCase() !== 'y') {
+        console.log('Embedding generation cancelled by user.');
+        process.exit(0);
+      }
+      resolve();
+    });
+  });
+
+  console.log('');
+
   // Process files
   console.log('Processing files...');
   const startTime = Date.now();

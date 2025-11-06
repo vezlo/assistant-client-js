@@ -13,6 +13,12 @@ export interface AssistantAIConfig {
     tone?: string;
     customInstructions?: string;
   };
+  logging?: {
+    level?: 'debug' | 'info' | 'warn' | 'error' | 'silent';
+    enableResponseLogging?: boolean;
+    enableRequestLogging?: boolean;
+    enableMetadataLogging?: boolean;
+  };
 }
 
 // Conversation types

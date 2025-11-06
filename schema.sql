@@ -135,7 +135,6 @@ CREATE INDEX IF NOT EXISTS idx_ai_personality_last_built ON ai_personality(last_
 -- SEMANTIC SEARCH FUNCTION
 -- ============================================================================
 -- Based on Supabase blog: https://supabase.com/blog/openai-embeddings-postgres-vector
--- Uses cosine distance operator (<=>) for efficient vector similarity search
 
 CREATE OR REPLACE FUNCTION match_knowledge_items(
   query_embedding vector(1536),
@@ -148,8 +147,7 @@ RETURNS TABLE (
   description text,
   content text,
   type text,
-  metadata jsonb,
-  similarity float
+  metadata jsonb
 )
 LANGUAGE plpgsql
 AS $$
@@ -161,12 +159,11 @@ BEGIN
     k.description,
     k.content,
     k.type,
-    k.metadata,
-    1 - (k.embedding <=> query_embedding) as similarity
+    k.metadata
   FROM ai_knowledge_items k
   WHERE k.embedding IS NOT NULL
-    AND 1 - (k.embedding <=> query_embedding) >= match_threshold
-  ORDER BY k.embedding <=> query_embedding
-  LIMIT LEAST(match_count, 20);
+    AND k.embedding <#> query_embedding < match_threshold
+  ORDER BY k.embedding <#> query_embedding ASC
+  LIMIT LEAST(match_count, 10);
 END;
 $$;

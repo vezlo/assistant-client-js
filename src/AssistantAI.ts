@@ -69,20 +69,7 @@ export class AssistantAI {
 
   async init(): Promise<void> {
     if (this.initialized) return;
-
-    // Startup reminder messages
-    console.log('');
-    console.log('='.repeat(60));
-    console.log('  Assistant AI - Initialization');
-    console.log('='.repeat(60));
-    console.log('');
-    console.log('📋 Setup Reminders:');
-    console.log('  1. Ensure you have run schema.sql in your Supabase SQL Editor');
-    console.log('  2. If you haven\'t created knowledge base embeddings yet,');
-    console.log('     you can run: node scripts/generate-embeddings.js');
-    console.log('     (See scripts/README.md for details)');
-    console.log('');
-
+    
     // Ensure personality exists
     try {
       await this.personalityService.getPersonality();
@@ -93,7 +80,6 @@ export class AssistantAI {
 
     this.initialized = true;
     console.log('✓ Assistant AI initialized successfully');
-    console.log('');
   }
 
   // ============================================================================

@@ -20,6 +20,51 @@ npm install @vezlo/assistant-client-js
 
 ## Quick Start
 
+### Database Setup
+
+#### 1. Run the SQL Schema
+
+You need to manually create the required tables in your database. Run the `schema.sql` file in your Supabase SQL Editor:
+
+1. Open your Supabase project
+2. Go to SQL Editor
+3. Copy and paste the contents of `schema.sql`
+4. Execute the SQL
+
+**Required tables:**
+- `ai_conversations` - Stores conversation metadata (linked to users via `creator_id`)
+- `ai_messages` - Stores all messages (linked to conversations via `conversation_id`)
+- `ai_message_feedback` - Optional feedback tracking
+- `ai_knowledge_items` - Knowledge base content with embeddings
+- `ai_personality` - System prompt and personality configuration
+
+**Data Model:**
+```
+User (your app's user ID)
+  └─> Conversations (creator_id)
+       └─> Messages (conversation_id)
+```
+
+**Note:** The `tablePrefix` in config determines the actual table names (default: `ai_`).
+
+#### 2. Generate Knowledge Base Embeddings (Optional)
+
+If you want to populate your knowledge base with code/documentation embeddings, you can use the `generate-embeddings.js` script:
+
+```bash
+cd scripts
+cp config.example.json config.json
+# Edit config.json with your credentials
+node generate-embeddings.js
+```
+
+This script will:
+- Scan your codebase or documentation folder
+- Generate embeddings using OpenAI
+- Store them in the `ai_knowledge_items` table
+
+See `scripts/README.md` for detailed instructions on using the embedding generation script.
+
 ```typescript
 import { AssistantAI } from '@vezlo/assistant-client-js';
 
@@ -260,51 +305,6 @@ const feedback = await assistant.getMessageFeedback(messageId);
 ```typescript
 const userFeedback = await assistant.getUserFeedback('user-123', 50);
 ```
-
-## Database Setup
-
-### 1. Run the SQL Schema
-
-You need to manually create the required tables in your database. Run the `schema.sql` file in your Supabase SQL Editor:
-
-1. Open your Supabase project
-2. Go to SQL Editor
-3. Copy and paste the contents of `schema.sql`
-4. Execute the SQL
-
-**Required tables:**
-- `ai_conversations` - Stores conversation metadata (linked to users via `creator_id`)
-- `ai_messages` - Stores all messages (linked to conversations via `conversation_id`)
-- `ai_message_feedback` - Optional feedback tracking
-- `ai_knowledge_items` - Knowledge base content with embeddings
-- `ai_personality` - System prompt and personality configuration
-
-**Data Model:**
-```
-User (your app's user ID)
-  └─> Conversations (creator_id)
-       └─> Messages (conversation_id)
-```
-
-**Note:** The `tablePrefix` in config determines the actual table names (default: `ai_`).
-
-### 2. Generate Knowledge Base Embeddings (Optional)
-
-If you want to populate your knowledge base with code/documentation embeddings, you can use the `generate-embeddings.js` script:
-
-```bash
-cd scripts
-cp config.example.json config.json
-# Edit config.json with your credentials
-node generate-embeddings.js
-```
-
-This script will:
-- Scan your codebase or documentation folder
-- Generate embeddings using OpenAI
-- Store them in the `ai_knowledge_items` table
-
-See `scripts/README.md` for detailed instructions on using the embedding generation script.
 
 ## Examples
 
